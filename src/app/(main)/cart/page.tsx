@@ -1,0 +1,262 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useCartStore } from "@/stores/cart-store";
+import { useNotificationStore } from "@/stores/notification-store";
+import { useAuthStore } from "@/stores/auth-store";
+import { createOrder } from "@/lib/api/orders";
+import { fetchAddresses, type ApiAddress } from "@/lib/api/addresses";
+import { ApiError } from "@/lib/api-client";
+import AuthGuard from "@/components/auth/AuthGuard";
+
+function formatPrice(value: number) {
+  return `${value.toLocaleString("vi-VN")}đ`;
+}
+
+function CartContent() {
+  const router = useRouter();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const items = useCartStore((state) => state.items);
+  const loaded = useCartStore((state) => state.loaded);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+
+  const [addresses, setAddresses] = useState<ApiAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetchAddresses().then((list) => {
+      setAddresses(list);
+      const def = list.find((a) => a.isDefault);
+      if (def) setSelectedAddressId(def.id);
+    }).catch(() => {});
+  }, [accessToken]);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const refresh = useCartStore((state) => state.refresh);
+  const addNotification = useNotificationStore((state) => state.addNotification);
+  const [note, setNote] = useState("");
+  const [placing, setPlacing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const rows = items.map((item) => {
+    const hasPriceChanged = !item.isFree && item.addedPrice !== item.product.currentPrice;
+    const lineTotal = item.isFree ? 0 : item.addedPrice * item.quantity;
+    return { item, hasPriceChanged, lineTotal };
+  });
+
+  const changedCount = rows.filter((row) => row.hasPriceChanged).length;
+  const totalQuantity = rows.reduce((sum, row) => sum + row.item.quantity, 0);
+  const totalAmount = rows.reduce((sum, row) => sum + row.lineTotal, 0);
+
+  if (!loaded) {
+    return <p className="text-sm text-text-secondary">Đang tải giỏ hàng...</p>;
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center">
+        <span className="text-4xl">🛒</span>
+        <p className="text-sm font-medium text-text-primary">Giỏ hàng trống</p>
+        <Link href="/products" className="text-sm font-medium text-primary">
+          Thêm sản phẩm ngay
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold text-text-primary">Giỏ hàng</h1>
+          {changedCount > 0 && (
+            <span className="rounded-full bg-price-orange/10 px-2 py-0.5 text-xs font-medium text-price-orange">
+              Giá đổi ({changedCount})
+            </span>
+          )}
+        </div>
+        <Link href="/products" className="text-sm font-medium text-primary">
+          ➕ Thêm sản phẩm
+        </Link>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-zinc-100">
+        <table className="w-full text-sm">
+          <thead className="bg-zinc-50 text-xs text-text-secondary">
+            <tr>
+              <th className="p-2 text-left">STT</th>
+              <th className="p-2 text-left">Thông tin sản phẩm</th>
+              <th className="p-2 text-right">Đơn giá</th>
+              <th className="p-2 text-center">SL</th>
+              <th className="p-2 text-right">Thành tiền</th>
+              <th className="p-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ item, hasPriceChanged, lineTotal }, index) => (
+              <tr
+                key={`${item.productId}-${item.isFree}`}
+                className="border-t border-zinc-100 align-top"
+              >
+                <td className="p-2">{index + 1}</td>
+                <td className="p-2">
+                  {item.product.name}
+                  {item.isFree && (
+                    <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-primary">
+                      QUÀ TẶNG
+                    </span>
+                  )}
+                </td>
+                <td className="p-2 text-right">
+                  {item.isFree ? (
+                    <span className="font-medium text-primary">Miễn phí</span>
+                  ) : hasPriceChanged ? (
+                    <div className="flex flex-col items-end">
+                      <span className="text-price-orange">
+                        {formatPrice(item.product.currentPrice)}
+                      </span>
+                      <span className="text-xs text-price-old line-through">
+                        {formatPrice(item.addedPrice)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-price">{formatPrice(item.addedPrice)}</span>
+                  )}
+                </td>
+                <td className="p-2">
+                  <div className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-200">
+                    <button
+                      onClick={() =>
+                        updateQuantity(item.productId, item.isFree, item.quantity - 1)
+                      }
+                      className="px-2 py-1 text-text-secondary"
+                    >
+                      -
+                    </button>
+                    <span>{item.quantity}</span>
+                    <button
+                      onClick={() =>
+                        updateQuantity(item.productId, item.isFree, item.quantity + 1)
+                      }
+                      className="px-2 py-1 text-text-secondary"
+                    >
+                      +
+                    </button>
+                  </div>
+                </td>
+                <td className="p-2 text-right font-medium">
+                  {item.isFree ? "0đ" : formatPrice(lineTotal)}
+                </td>
+                <td className="p-2 text-center">
+                  <button
+                    onClick={() => removeItem(item.productId, item.isFree)}
+                    aria-label="Xóa sản phẩm"
+                    className="text-error"
+                  >
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col gap-1 text-sm">
+        <span className="text-text-secondary">
+          Tổng {rows.length} loại · {totalQuantity} sp
+        </span>
+        <span className="text-lg font-bold text-text-primary">
+          Tổng cộng {formatPrice(totalAmount)}
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-xl border border-zinc-100 p-3">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-medium text-text-primary">Địa chỉ giao hàng</span>
+          <Link href="/profile" className="text-xs text-primary">Quản lý</Link>
+        </div>
+        {addresses.length === 0 ? (
+          <p className="text-sm text-text-secondary">
+            Giao đến địa chỉ đăng ký của nhà thuốc.{" "}
+            <Link href="/profile" className="text-primary">Thêm địa chỉ khác</Link>
+          </p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {addresses.map((addr) => (
+              <label key={addr.id} className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2.5 text-sm ${
+                selectedAddressId === addr.id ? "border-primary bg-accent" : "border-zinc-200"}`}>
+                <input
+                  type="radio"
+                  name="address"
+                  value={addr.id}
+                  checked={selectedAddressId === addr.id}
+                  onChange={() => setSelectedAddressId(addr.id)}
+                  className="mt-0.5"
+                />
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-medium text-text-primary">
+                    {addr.label}
+                    {addr.isDefault && (
+                      <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-white">Mặc định</span>
+                    )}
+                  </span>
+                  <span className="text-xs text-text-secondary">
+                    {addr.street}, {addr.ward}, {addr.district}, {addr.province}
+                  </span>
+                  {addr.phone && <span className="text-xs text-text-secondary">{addr.phone}</span>}
+                </div>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="🖊 Ghi chú đơn..."
+        className="w-full rounded-lg border border-zinc-200 p-3 text-sm outline-none focus:border-primary"
+        rows={2}
+      />
+
+      {error && <p className="text-sm text-error">{error}</p>}
+
+      <button
+        disabled={placing}
+        onClick={async () => {
+          setError(null);
+          setPlacing(true);
+          try {
+            const order = await createOrder(note || undefined, selectedAddressId || undefined);
+            addNotification({
+              type: "order_placed",
+              title: "Đặt hàng thành công",
+              body: `Đơn hàng ${order.orderNumber} đã được tiếp nhận và đang chờ xác nhận.`,
+              orderId: order.id,
+            });
+            await refresh();
+            router.push("/orders");
+          } catch (err) {
+            setError(err instanceof ApiError ? err.message : "Đặt hàng thất bại");
+          } finally {
+            setPlacing(false);
+          }
+        }}
+        className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+      >
+        {placing ? "Đang xử lý..." : "✅ Xác nhận đơn hàng"}
+      </button>
+    </div>
+  );
+}
+
+export default function CartPage() {
+  return (
+    <AuthGuard>
+      <CartContent />
+    </AuthGuard>
+  );
+}
