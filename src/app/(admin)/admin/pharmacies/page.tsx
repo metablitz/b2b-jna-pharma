@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchAdminPharmacies, updatePharmacyStatus, type AdminPharmacy } from "@/lib/api/admin";
+import { fetchAdminPharmacies, updatePharmacyStatus, resetPharmacyPassword, type AdminPharmacy } from "@/lib/api/admin";
 
 const STATUS_TABS = [
   { id: "", label: "Tất cả" },
@@ -26,6 +26,7 @@ export default function AdminPharmaciesPage() {
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [tempPassword, setTempPassword] = useState<{ name: string; password: string } | null>(null);
 
   async function load() {
     setLoading(true);
@@ -41,6 +42,12 @@ export default function AdminPharmaciesPage() {
   async function setPharmacyStatus(id: string, newStatus: string) {
     await updatePharmacyStatus(id, newStatus);
     await load();
+  }
+
+  async function handleResetPassword(pharmacy: AdminPharmacy) {
+    if (!confirm(`Reset mật khẩu cho nhà thuốc "${pharmacy.name}"?`)) return;
+    const res = await resetPharmacyPassword(pharmacy.id);
+    setTempPassword({ name: pharmacy.name, password: res.tempPassword });
   }
 
   return (
@@ -104,12 +111,48 @@ export default function AdminPharmaciesPage() {
                       {p.status !== "suspended" && (
                         <button onClick={() => setPharmacyStatus(p.id, "suspended")} className="text-error">Khóa</button>
                       )}
+                      <button onClick={() => handleResetPassword(p)} className="text-zinc-400 hover:text-zinc-700">Reset MK</button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {tempPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <span className="text-3xl">🔑</span>
+              <h2 className="text-base font-bold text-text-primary">Mật khẩu tạm thời</h2>
+              <p className="text-sm text-text-secondary">
+                Nhà thuốc <strong>{tempPassword.name}</strong> đã được reset mật khẩu.
+                Thông báo cho chủ nhà thuốc mật khẩu dưới đây:
+              </p>
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-4 py-3">
+              <span className="font-mono text-lg font-bold text-text-primary tracking-wider">
+                {tempPassword.password}
+              </span>
+              <button
+                onClick={() => navigator.clipboard.writeText(tempPassword.password)}
+                className="text-xs text-primary"
+              >
+                Sao chép
+              </button>
+            </div>
+            <p className="text-center text-xs text-text-secondary">
+              Yêu cầu nhà thuốc đổi mật khẩu sau khi đăng nhập.
+            </p>
+            <button
+              onClick={() => setTempPassword(null)}
+              className="rounded-lg bg-primary py-2.5 text-sm font-medium text-white"
+            >
+              Đã thông báo xong
+            </button>
+          </div>
         </div>
       )}
     </div>

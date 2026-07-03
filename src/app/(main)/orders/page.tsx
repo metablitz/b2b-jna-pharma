@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { fetchOrders, cancelOrder, type ApiOrder } from "@/lib/api/orders";
+import { addCartItem } from "@/lib/api/cart";
+import { useCartStore } from "@/stores/cart-store";
 import { ApiError } from "@/lib/api-client";
 import { OrderStatus } from "@/types";
 import AuthGuard from "@/components/auth/AuthGuard";
@@ -29,6 +32,8 @@ function formatDate(date: Date) {
 }
 
 function OrdersContent() {
+  const router = useRouter();
+  const refreshCart = useCartStore((s) => s.refresh);
   const [status, setStatus] = useState<OrderStatus>("pending");
   const [orders, setOrders] = useState<ApiOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +41,9 @@ function OrdersContent() {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<ApiOrder | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -57,6 +65,28 @@ function OrdersContent() {
       setCancelError(e instanceof ApiError ? e.message : "Hủy đơn thất bại");
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function handleEdit() {
+    if (!editTarget) return;
+    setEditing(true);
+    setEditError(null);
+    try {
+      await cancelOrder(editTarget.id, "Nhà thuốc yêu cầu sửa đơn");
+      // Add each non-free item back to cart (skip if product deactivated)
+      await Promise.allSettled(
+        editTarget.items
+          .filter((item) => item.unitPrice > 0)
+          .map((item) => addCartItem(item.productId, item.quantity))
+      );
+      await refreshCart();
+      setEditTarget(null);
+      router.push("/cart");
+    } catch (e) {
+      setEditError(e instanceof ApiError ? e.message : "Không thể sửa đơn hàng");
+    } finally {
+      setEditing(false);
     }
   }
 
@@ -97,6 +127,7 @@ function OrdersContent() {
               key={order.id}
               order={order}
               onCancel={() => { setCancelTarget(order); setCancelReason(""); setCancelError(null); }}
+              onEdit={() => { setEditTarget(order); setEditError(null); }}
             />
           ))}
         </div>
@@ -147,6 +178,41 @@ function OrdersContent() {
           </div>
         </div>
       )}
+      {/* Edit order confirmation modal */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+            <h2 className="text-base font-bold text-text-primary">Sửa đơn hàng</h2>
+            <p className="mt-1 text-sm text-text-secondary">
+              Đơn <span className="font-medium text-text-primary">{editTarget.orderNumber}</span> sẽ bị hủy,
+              và tất cả sản phẩm sẽ được chuyển vào giỏ hàng để bạn chỉnh sửa lại.
+            </p>
+            <div className="mt-3 rounded-lg bg-zinc-50 p-3 text-xs text-text-secondary">
+              ⚠️ Giá hiển thị trong giỏ hàng có thể đã thay đổi so với lúc đặt.
+            </div>
+
+            {editError && (
+              <p className="mt-2 text-xs text-error">{editError}</p>
+            )}
+
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => setEditTarget(null)}
+                className="flex-1 rounded-lg border border-zinc-200 py-2.5 text-sm text-text-secondary"
+              >
+                Không sửa
+              </button>
+              <button
+                onClick={handleEdit}
+                disabled={editing}
+                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-medium text-white disabled:opacity-60"
+              >
+                {editing ? "Đang xử lý..." : "Sửa đơn hàng"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -162,9 +228,11 @@ export default function OrdersPage() {
 function OrderCard({
   order,
   onCancel,
+  onEdit,
 }: {
   order: ApiOrder;
   onCancel: () => void;
+  onEdit: () => void;
 }) {
   const itemSummary =
     order.items.length === 1
@@ -183,12 +251,20 @@ function OrderCard({
       <div className="flex items-center justify-between">
         <p className="text-sm font-bold text-text-primary">{formatPrice(order.total)}</p>
         {canCancel && (
-          <button
-            onClick={onCancel}
-            className="rounded-lg border border-error px-3 py-1 text-xs font-medium text-error"
-          >
-            Hủy đơn
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onEdit}
+              className="rounded-lg border border-zinc-200 px-3 py-1 text-xs font-medium text-text-secondary"
+            >
+              Sửa đơn
+            </button>
+            <button
+              onClick={onCancel}
+              className="rounded-lg border border-error px-3 py-1 text-xs font-medium text-error"
+            >
+              Hủy đơn
+            </button>
+          </div>
         )}
       </div>
     </div>

@@ -41,12 +41,15 @@ function CartContent() {
   const [error, setError] = useState<string | null>(null);
 
   const rows = items.map((item) => {
-    const hasPriceChanged = !item.isFree && item.addedPrice !== item.product.currentPrice;
-    const lineTotal = item.isFree ? 0 : item.addedPrice * item.quantity;
-    return { item, hasPriceChanged, lineTotal };
+    const isDiscontinued = !item.product.isActive && !item.isFree;
+    const isOutOfStock = item.product.isActive && item.product.stockQuantity === 0 && !item.isFree;
+    const hasPriceChanged = !item.isFree && !isDiscontinued && item.addedPrice !== item.product.currentPrice;
+    const lineTotal = item.isFree || isDiscontinued ? 0 : item.addedPrice * item.quantity;
+    return { item, hasPriceChanged, lineTotal, isDiscontinued, isOutOfStock };
   });
 
   const changedCount = rows.filter((row) => row.hasPriceChanged).length;
+  const blockedCount = rows.filter((r) => r.isDiscontinued || r.isOutOfStock).length;
   const totalQuantity = rows.reduce((sum, row) => sum + row.item.quantity, 0);
   const totalAmount = rows.reduce((sum, row) => sum + row.lineTotal, 0);
 
@@ -76,11 +79,26 @@ function CartContent() {
               Giá đổi ({changedCount})
             </span>
           )}
+          {blockedCount > 0 && (
+            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-error">
+              Cần xử lý ({blockedCount})
+            </span>
+          )}
         </div>
         <Link href="/products" className="text-sm font-medium text-primary">
           ➕ Thêm sản phẩm
         </Link>
       </div>
+
+      {blockedCount > 0 && (
+        <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm">
+          <p className="font-medium text-error">Giỏ hàng có {blockedCount} sản phẩm không thể đặt</p>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            Vui lòng xóa sản phẩm <strong>Ngừng bán</strong> / <strong>Hết hàng</strong> trước khi đặt hàng,
+            hoặc liên hệ <a href="tel:0966050306" className="font-medium text-primary">0966 050 306</a> để được hỗ trợ.
+          </p>
+        </div>
+      )}
 
       <div className="overflow-x-auto rounded-xl border border-zinc-100">
         <table className="w-full text-sm">
@@ -95,22 +113,42 @@ function CartContent() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ item, hasPriceChanged, lineTotal }, index) => (
+            {rows.map(({ item, hasPriceChanged, lineTotal, isDiscontinued, isOutOfStock }, index) => (
               <tr
                 key={`${item.productId}-${item.isFree}`}
-                className="border-t border-zinc-100 align-top"
+                className={`border-t border-zinc-100 align-top ${isDiscontinued || isOutOfStock ? "opacity-60" : ""}`}
               >
                 <td className="p-2">{index + 1}</td>
                 <td className="p-2">
-                  {item.product.name}
-                  {item.isFree && (
-                    <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-primary">
-                      QUÀ TẶNG
+                  <div className="flex flex-col gap-1">
+                    <span className={isDiscontinued || isOutOfStock ? "text-text-secondary" : ""}>
+                      {item.product.name}
                     </span>
-                  )}
+                    <div className="flex flex-wrap gap-1">
+                      {item.isFree && (
+                        <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-primary">
+                          QUÀ TẶNG
+                        </span>
+                      )}
+                      {isDiscontinued && (
+                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                          Ngừng bán
+                        </span>
+                      )}
+                      {isOutOfStock && (
+                        <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-error">
+                          Hết hàng
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </td>
                 <td className="p-2 text-right">
-                  {item.isFree ? (
+                  {isDiscontinued ? (
+                    <a href="tel:0966050306" className="text-xs font-medium text-primary whitespace-nowrap">
+                      Liên hệ
+                    </a>
+                  ) : item.isFree ? (
                     <span className="font-medium text-primary">Miễn phí</span>
                   ) : hasPriceChanged ? (
                     <div className="flex flex-col items-end">
@@ -126,28 +164,38 @@ function CartContent() {
                   )}
                 </td>
                 <td className="p-2">
-                  <div className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-200">
-                    <button
-                      onClick={() =>
-                        updateQuantity(item.productId, item.isFree, item.quantity - 1)
-                      }
-                      className="px-2 py-1 text-text-secondary"
-                    >
-                      -
-                    </button>
-                    <span>{item.quantity}</span>
-                    <button
-                      onClick={() =>
-                        updateQuantity(item.productId, item.isFree, item.quantity + 1)
-                      }
-                      className="px-2 py-1 text-text-secondary"
-                    >
-                      +
-                    </button>
-                  </div>
+                  {isDiscontinued || isOutOfStock ? (
+                    <span className="block text-center text-xs text-text-secondary">—</span>
+                  ) : (
+                    <div className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-200">
+                      <button
+                        onClick={() =>
+                          updateQuantity(item.productId, item.isFree, item.quantity - 1)
+                        }
+                        className="px-2 py-1 text-text-secondary"
+                      >
+                        -
+                      </button>
+                      <span>{item.quantity}</span>
+                      <button
+                        onClick={() =>
+                          updateQuantity(item.productId, item.isFree, item.quantity + 1)
+                        }
+                        className="px-2 py-1 text-text-secondary"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
                 </td>
                 <td className="p-2 text-right font-medium">
-                  {item.isFree ? "0đ" : formatPrice(lineTotal)}
+                  {isDiscontinued ? (
+                    <span className="text-xs text-text-secondary">—</span>
+                  ) : item.isFree ? (
+                    "0đ"
+                  ) : (
+                    formatPrice(lineTotal)
+                  )}
                 </td>
                 <td className="p-2 text-center">
                   <button
@@ -225,7 +273,7 @@ function CartContent() {
       {error && <p className="text-sm text-error">{error}</p>}
 
       <button
-        disabled={placing}
+        disabled={placing || blockedCount > 0}
         onClick={async () => {
           setError(null);
           setPlacing(true);
@@ -245,9 +293,13 @@ function CartContent() {
             setPlacing(false);
           }
         }}
-        className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+        className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {placing ? "Đang xử lý..." : "✅ Xác nhận đơn hàng"}
+        {placing
+          ? "Đang xử lý..."
+          : blockedCount > 0
+          ? `Xóa ${blockedCount} sản phẩm lỗi trước`
+          : "✅ Xác nhận đơn hàng"}
       </button>
     </div>
   );

@@ -166,6 +166,11 @@ export const updatePharmacyStatus = (id: string, status: string) =>
     { method: "PUT", body: JSON.stringify({ status }) }
   );
 
+export const resetPharmacyPassword = (id: string) =>
+  adminFetch<{ tempPassword: string }>(`/admin/pharmacies/${id}/reset-password`, {
+    method: "POST",
+  });
+
 // ── Admin Chat ──────────────────────────────────────────────────────────────
 
 export interface AdminChatRoom {
