@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
+import { COMPANY } from "@/lib/constants";
 
 export default function ProductsAuthGate({ children }: { children: React.ReactNode }) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
@@ -21,7 +22,7 @@ export default function ProductsAuthGate({ children }: { children: React.ReactNo
       <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
         <span className="text-5xl">💊</span>
         <h2 className="text-lg font-bold text-text-primary">
-          Nền tảng B2B phân phối dược phẩm
+          {COMPANY.brandName} — Nền tảng B2B dược phẩm
         </h2>
         <p className="max-w-xs text-sm text-text-secondary">
           Đăng nhập để xem danh sách sản phẩm và giá sỉ dành riêng cho nhà thuốc.
@@ -52,13 +53,13 @@ export default function ProductsAuthGate({ children }: { children: React.ReactNo
           Tài khoản đang chờ xác nhận
         </h2>
         <p className="max-w-xs text-sm text-text-secondary">
-          Đội ngũ JNA Pharma đang xem xét thông tin nhà thuốc của bạn.
+          Đội ngũ {COMPANY.brandName} đang xem xét thông tin nhà thuốc của bạn.
           Chúng tôi sẽ thông báo ngay khi tài khoản được duyệt (thường trong 1 ngày làm việc).
         </p>
         <div className="flex flex-col gap-1 rounded-xl bg-accent px-4 py-3 text-xs text-text-secondary">
           <span>Cần hỗ trợ? Liên hệ hotline</span>
-          <a href="tel:0966050306" className="font-bold text-primary text-sm">
-            0966 050 306
+          <a href={`tel:${COMPANY.hotlineTel}`} className="font-bold text-primary text-sm">
+            {COMPANY.hotline}
           </a>
         </div>
       </div>
@@ -74,12 +75,12 @@ export default function ProductsAuthGate({ children }: { children: React.ReactNo
         </h2>
         <p className="max-w-xs text-sm text-text-secondary">
           Tài khoản nhà thuốc của bạn đang bị tạm khóa.
-          Vui lòng liên hệ JNA Pharma để biết thêm thông tin.
+          Vui lòng liên hệ {COMPANY.brandName} để biết thêm thông tin.
         </p>
         <div className="flex flex-col gap-1 rounded-xl bg-red-50 px-4 py-3 text-xs text-text-secondary">
           <span>Liên hệ hỗ trợ</span>
-          <a href="tel:0966050306" className="font-bold text-error text-sm">
-            0966 050 306
+          <a href={`tel:${COMPANY.hotlineTel}`} className="font-bold text-error text-sm">
+            {COMPANY.hotline}
           </a>
         </div>
       </div>

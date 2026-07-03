@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthGuard from "@/components/auth/AuthGuard";
 import { useAuthStore } from "@/stores/auth-store";
+import { COMPANY } from "@/lib/constants";
 import { updateProfile, changePassword } from "@/lib/api/profile";
 import {
   fetchAddresses,
@@ -191,7 +192,7 @@ function ProfileContent() {
 
       {/* Support */}
       <Section title="Hỗ trợ">
-        <Row icon="🎧" label="Liên hệ hỗ trợ - 0966 050306" href="/chat" />
+        <Row icon="🎧" label={`Hotline ${COMPANY.hotline}`} href={`tel:${COMPANY.hotlineTel}`} />
         <Row icon="ℹ️" label="Về ứng dụng" href="/profile" />
       </Section>
 

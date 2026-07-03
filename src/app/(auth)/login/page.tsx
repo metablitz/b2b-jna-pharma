@@ -6,6 +6,7 @@ import { useState } from "react";
 import { login } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
+import { COMPANY } from "@/lib/constants";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -105,8 +106,8 @@ export default function LoginPage() {
       </form>
 
       <div className="flex flex-col items-center gap-0.5 border-t border-zinc-100 pt-4 text-center text-xs text-text-secondary">
-        <p>Hotline hỗ trợ: 0966 050306</p>
-        <p>Công ty TNHH Thương mại và Dịch vụ Đầu tư Hùng Dũng</p>
+        <p>Hotline hỗ trợ: <a href={`tel:${COMPANY.hotlineTel}`} className="font-medium text-primary">{COMPANY.hotline}</a></p>
+        <p>{COMPANY.fullName}</p>
       </div>
     </div>
   );

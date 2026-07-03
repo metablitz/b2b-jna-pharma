@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "JNA Pharma - Nền tảng B2B phân phối dược phẩm",
-  description: "Đặt hàng dược phẩm sỉ cho nhà thuốc",
+  description: "Đặt hàng dược phẩm sỉ dành riêng cho nhà thuốc - Công ty TNHH Dược Jet Ngọc Ánh",
 };
 
 export default function RootLayout({

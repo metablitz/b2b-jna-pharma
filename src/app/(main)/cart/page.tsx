@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCartStore } from "@/stores/cart-store";
 import { useNotificationStore } from "@/stores/notification-store";
+import { COMPANY } from "@/lib/constants";
 import { useAuthStore } from "@/stores/auth-store";
 import { createOrder } from "@/lib/api/orders";
 import { fetchAddresses, type ApiAddress } from "@/lib/api/addresses";
@@ -95,7 +96,7 @@ function CartContent() {
           <p className="font-medium text-error">Giỏ hàng có {blockedCount} sản phẩm không thể đặt</p>
           <p className="mt-0.5 text-xs text-text-secondary">
             Vui lòng xóa sản phẩm <strong>Ngừng bán</strong> / <strong>Hết hàng</strong> trước khi đặt hàng,
-            hoặc liên hệ <a href="tel:0966050306" className="font-medium text-primary">0966 050 306</a> để được hỗ trợ.
+            hoặc liên hệ <a href={`tel:${COMPANY.hotlineTel}`} className="font-medium text-primary">{COMPANY.hotline}</a> để được hỗ trợ.
           </p>
         </div>
       )}
@@ -145,7 +146,7 @@ function CartContent() {
                 </td>
                 <td className="p-2 text-right">
                   {isDiscontinued ? (
-                    <a href="tel:0966050306" className="text-xs font-medium text-primary whitespace-nowrap">
+                    <a href={`tel:${COMPANY.hotlineTel}`} className="text-xs font-medium text-primary whitespace-nowrap">
                       Liên hệ
                     </a>
                   ) : item.isFree ? (
