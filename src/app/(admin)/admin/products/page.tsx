@@ -6,9 +6,12 @@ import {
   createAdminProduct,
   updateAdminProduct,
   deleteAdminProduct,
+  fetchImportLogs,
   type AdminProduct,
   type ProductPayload,
+  type ImportLog,
 } from "@/lib/api/admin";
+import ImportWizard from "@/components/admin/ImportWizard";
 
 const BLANK: ProductPayload = {
   name: "",
@@ -39,6 +42,9 @@ export default function AdminProductsPage() {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState<ProductPayload>(BLANK);
   const [saving, setSaving] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [logs, setLogs] = useState<ImportLog[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
 
   async function load(q?: string) {
     setLoading(true);
@@ -102,9 +108,23 @@ export default function AdminProductsPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-text-primary">💊 Quản lý sản phẩm</h1>
-        <button onClick={openAdd} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white">
-          + Thêm sản phẩm
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={async () => { setShowLogs(true); setLogs(await fetchImportLogs()); }}
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm text-text-secondary"
+          >
+            📋 Lịch sử
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white"
+          >
+            📥 Import Excel
+          </button>
+          <button onClick={openAdd} className="rounded-lg border border-primary px-4 py-2 text-sm font-medium text-primary">
+            + Thêm thủ công
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2">
@@ -236,6 +256,72 @@ export default function AdminProductsPage() {
               <button onClick={save} disabled={saving} className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-white disabled:opacity-60">
                 {saving ? "Đang lưu..." : "Lưu"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Wizard Modal */}
+      {showImport && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
+          <div className="my-8 w-full max-w-lg rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+              <h2 className="text-base font-bold">📥 Import sản phẩm từ Excel</h2>
+              <button onClick={() => setShowImport(false)} className="text-text-secondary">✕</button>
+            </div>
+            <div className="p-5">
+              <ImportWizard
+                onDone={() => {
+                  setShowImport(false);
+                  load(search);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Logs Modal */}
+      {showLogs && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
+          <div className="my-8 w-full max-w-2xl rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+              <h2 className="text-base font-bold">📋 Lịch sử Import</h2>
+              <button onClick={() => setShowLogs(false)} className="text-text-secondary">✕</button>
+            </div>
+            <div className="overflow-x-auto p-4">
+              {logs.length === 0 ? (
+                <p className="text-center text-sm text-text-secondary py-8">Chưa có lần import nào.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-zinc-50 text-xs text-text-secondary">
+                    <tr>
+                      <th className="p-2 text-left">Thời gian</th>
+                      <th className="p-2 text-left">File</th>
+                      <th className="p-2 text-center">Tổng</th>
+                      <th className="p-2 text-center">Tạo</th>
+                      <th className="p-2 text-center">Cập nhật</th>
+                      <th className="p-2 text-center">Ẩn</th>
+                      <th className="p-2 text-center">Bỏ qua</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((log) => (
+                      <tr key={log.id} className="border-t border-zinc-100">
+                        <td className="p-2 text-xs text-text-secondary">
+                          {new Date(log.createdAt).toLocaleString("vi-VN")}
+                        </td>
+                        <td className="p-2 text-xs text-text-primary max-w-xs truncate">{log.fileName}</td>
+                        <td className="p-2 text-center">{log.totalRows}</td>
+                        <td className="p-2 text-center text-primary">{log.created}</td>
+                        <td className="p-2 text-center text-price-orange">{log.updated}</td>
+                        <td className="p-2 text-center text-error">{log.deactivated}</td>
+                        <td className="p-2 text-center text-text-secondary">{log.skipped}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import ProductTabs from "@/components/product/ProductTabs";
+import ProductsAuthGate from "@/components/product/ProductsAuthGate";
 
 export default async function ProductsPage({
   searchParams,
@@ -9,7 +10,9 @@ export default async function ProductsPage({
   const { q } = await searchParams;
   return (
     <Suspense>
-      <ProductTabs initialSearch={q} />
+      <ProductsAuthGate>
+        <ProductTabs initialSearch={q} />
+      </ProductsAuthGate>
     </Suspense>
   );
 }

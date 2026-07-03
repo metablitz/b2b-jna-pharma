@@ -194,3 +194,105 @@ export const adminSendChatMessage = (roomId: string, content: string) =>
     method: "POST",
     body: JSON.stringify({ content }),
   });
+
+// ── Import ───────────────────────────────────────────────────────────────────
+
+export interface ParsedProductPreview {
+  barcode: string;
+  name: string;
+  rawCategory: string;
+  unit: string;
+  manufacturer: string;
+  currentPrice: number;
+  rowIndex: number;
+}
+
+export interface MissingProduct {
+  id: string;
+  name: string;
+  barcode: string;
+}
+
+export interface ImportPreviewResult {
+  totalRows: number;
+  toCreate: ParsedProductPreview[];
+  toUpdate: ParsedProductPreview[];
+  errors: { rowIndex: number; reason: string; name?: string }[];
+  newRawCategories: string[];
+  missingProducts: MissingProduct[];
+  existingCategoryMappings: Record<string, string>;
+}
+
+export interface ImportResult {
+  created: number;
+  updated: number;
+  deactivated: number;
+  kept: number;
+  skipped: number;
+  errors: { rowIndex: number; reason: string }[];
+}
+
+export interface CategoryMapping {
+  id: string;
+  rawName: string;
+  displayName: string;
+}
+
+export interface ImportLog {
+  id: string;
+  type: string;
+  fileName: string;
+  createdAt: string;
+  totalRows: number;
+  created: number;
+  updated: number;
+  deactivated: number;
+  skipped: number;
+  kept: number;
+  errors: unknown;
+}
+
+export async function previewImport(file: File): Promise<ImportPreviewResult> {
+  const token = (await import("@/stores/admin-auth-store"))
+    .useAdminAuthStore.getState().accessToken;
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api"}/admin/import/products/preview`,
+    { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function executeImport(
+  file: File,
+  choices: {
+    categoryMappings: { rawName: string; displayName: string }[];
+    missingActions: { productId: string; action: "deactivate" | "keep"; reason?: string }[];
+  }
+): Promise<ImportResult> {
+  const token = (await import("@/stores/admin-auth-store"))
+    .useAdminAuthStore.getState().accessToken;
+  const form = new FormData();
+  form.append("file", file);
+  form.append("choices", JSON.stringify(choices));
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api"}/admin/import/products/execute`,
+    { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export const fetchCategoryMappings = () =>
+  adminFetch<CategoryMapping[]>("/admin/import/category-mappings");
+
+export const saveCategoryMappings = (mappings: { rawName: string; displayName: string }[]) =>
+  adminFetch<CategoryMapping[]>("/admin/import/category-mappings", {
+    method: "PUT",
+    body: JSON.stringify({ mappings }),
+  });
+
+export const fetchImportLogs = () =>
+  adminFetch<ImportLog[]>("/admin/import/logs");

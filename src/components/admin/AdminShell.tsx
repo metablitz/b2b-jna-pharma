@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAdminAuthStore } from "@/stores/admin-auth-store";
+import { adminFetch } from "@/lib/admin-api-client";
 import AdminGuard from "./AdminGuard";
 
 const NAV = [
   { href: "/admin/products", icon: "💊", label: "Sản phẩm" },
   { href: "/admin/orders", icon: "📋", label: "Đơn hàng" },
   { href: "/admin/promotions", icon: "🏷️", label: "Khuyến mãi" },
-  { href: "/admin/pharmacies", icon: "🏥", label: "Nhà thuốc" },
+  { href: "/admin/pharmacies", icon: "🏥", label: "Nhà thuốc", showPending: true },
   { href: "/admin/chat", icon: "💬", label: "Chat hỗ trợ" },
 ];
 
@@ -18,6 +20,20 @@ function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const admin = useAdminAuthStore((state) => state.admin);
   const clear = useAdminAuthStore((state) => state.clear);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    adminFetch<{ count: number }>("/admin/pharmacies/pending-count")
+      .then(({ count }) => setPendingCount(count))
+      .catch(() => {});
+
+    const interval = setInterval(() => {
+      adminFetch<{ count: number }>("/admin/pharmacies/pending-count")
+        .then(({ count }) => setPendingCount(count))
+        .catch(() => {});
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex min-h-full bg-zinc-50">
@@ -42,7 +58,12 @@ function Shell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <span>{item.icon}</span>
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.showPending && pendingCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-badge-red px-1 text-[10px] text-white">
+                  {pendingCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

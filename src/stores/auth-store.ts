@@ -1,12 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export type PharmacyStatus = "pending" | "active" | "suspended";
+
 export interface AuthPharmacy {
   id: string;
   code: string;
   name: string;
   phone: string;
   memberTier: string;
+  status: PharmacyStatus;
   street: string;
   ward: string;
   district: string;
