@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Product } from "@/types";
 import { useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -60,11 +61,18 @@ export default function ProductCard({
           )}
         </div>
         <div className="flex flex-1 flex-col gap-1">
-          <p className="text-sm font-medium text-text-primary">{product.name}</p>
+          <Link href={`/products/${product.id}`} className="text-sm font-medium text-text-primary hover:text-primary">
+            {product.name}
+          </Link>
           {expiryLabel && (
             <p className="flex items-center gap-1 text-xs text-text-secondary">
               📅 HSD {expiryLabel}
             </p>
+          )}
+          {product.stockQuantity === 0 && (
+            <span className="self-start rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-medium text-price-orange">
+              Hết hàng — Đặt trước
+            </span>
           )}
           <div className="flex items-baseline gap-2">
             <span className="text-base font-bold text-price">
@@ -127,9 +135,11 @@ export default function ProductCard({
               setAdding(false);
             }
           }}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+          className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-60 ${
+            product.stockQuantity === 0 ? "bg-price-orange" : "bg-primary"
+          }`}
         >
-          🛒 Thêm
+          {product.stockQuantity === 0 ? "📋 Đặt trước" : "🛒 Thêm"}
         </button>
       </div>
     </article>

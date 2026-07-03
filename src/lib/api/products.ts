@@ -25,6 +25,21 @@ export async function fetchProducts(search?: string): Promise<Product[]> {
   return raw.map(mapProduct);
 }
 
+export async function fetchProduct(id: string): Promise<Product & { promotions: RawPromotion[] }> {
+  const raw = await apiFetch<RawProduct & { promotions: RawPromotion[] }>(`/products/${id}`);
+  return { ...mapProduct(raw), promotions: raw.promotions };
+}
+
+export interface RawPromotion {
+  id: string;
+  type: string;
+  title: string;
+  totalSaving: number;
+  minOrderQuantity: number | null;
+  buyProducts: { productId: string; quantity: number; price: number; isFree: boolean; product: { name: string; unit: string } }[];
+  giveProducts: { productId: string; quantity: number; price: number; isFree: boolean; product: { name: string; unit: string } }[];
+}
+
 export async function fetchProductCategories(): Promise<string[]> {
   return apiFetch<string[]>("/products/categories");
 }

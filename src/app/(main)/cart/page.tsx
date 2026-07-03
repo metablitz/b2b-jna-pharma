@@ -50,7 +50,8 @@ function CartContent() {
   });
 
   const changedCount = rows.filter((row) => row.hasPriceChanged).length;
-  const blockedCount = rows.filter((r) => r.isDiscontinued || r.isOutOfStock).length;
+  const blockedCount = rows.filter((r) => r.isDiscontinued).length; // only discontinued blocks checkout
+  const preOrderCount = rows.filter((r) => r.isOutOfStock).length;
   const totalQuantity = rows.reduce((sum, row) => sum + row.item.quantity, 0);
   const totalAmount = rows.reduce((sum, row) => sum + row.lineTotal, 0);
 
@@ -82,7 +83,12 @@ function CartContent() {
           )}
           {blockedCount > 0 && (
             <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-error">
-              Cần xử lý ({blockedCount})
+              Ngừng bán ({blockedCount})
+            </span>
+          )}
+          {preOrderCount > 0 && (
+            <span className="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-price-orange">
+              Đặt trước ({preOrderCount})
             </span>
           )}
         </div>
@@ -93,10 +99,18 @@ function CartContent() {
 
       {blockedCount > 0 && (
         <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm">
-          <p className="font-medium text-error">Giỏ hàng có {blockedCount} sản phẩm không thể đặt</p>
+          <p className="font-medium text-error">Có {blockedCount} sản phẩm đã ngừng bán — không thể đặt hàng</p>
           <p className="mt-0.5 text-xs text-text-secondary">
-            Vui lòng xóa sản phẩm <strong>Ngừng bán</strong> / <strong>Hết hàng</strong> trước khi đặt hàng,
-            hoặc liên hệ <a href={`tel:${COMPANY.hotlineTel}`} className="font-medium text-primary">{COMPANY.hotline}</a> để được hỗ trợ.
+            Vui lòng xóa sản phẩm <strong>Ngừng bán</strong> hoặc liên hệ{" "}
+            <a href={`tel:${COMPANY.hotlineTel}`} className="font-medium text-primary">{COMPANY.hotline}</a>.
+          </p>
+        </div>
+      )}
+      {preOrderCount > 0 && (
+        <div className="rounded-xl border border-orange-100 bg-orange-50 p-3 text-sm">
+          <p className="font-medium text-price-orange">Có {preOrderCount} sản phẩm đang hết hàng — sẽ xử lý dưới dạng đặt trước</p>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            Đội ngũ JNA Pharma sẽ liên hệ xác nhận thời gian giao khi hàng về.
           </p>
         </div>
       )}
@@ -299,7 +313,9 @@ function CartContent() {
         {placing
           ? "Đang xử lý..."
           : blockedCount > 0
-          ? `Xóa ${blockedCount} sản phẩm lỗi trước`
+          ? `Xóa ${blockedCount} sản phẩm ngừng bán trước`
+          : preOrderCount > 0
+          ? `✅ Xác nhận đơn (${preOrderCount} đặt trước)`
           : "✅ Xác nhận đơn hàng"}
       </button>
     </div>
