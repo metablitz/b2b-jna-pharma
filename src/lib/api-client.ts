@@ -11,9 +11,14 @@ export class ApiError extends Error {
 }
 
 async function rawFetch(path: string, options: RequestInit = {}) {
+  const isFormData = options.body instanceof FormData;
   return fetch(`${API_URL}${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...options.headers },
+    headers: {
+      // Don't set Content-Type for FormData — browser sets it with boundary automatically
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...options.headers,
+    },
   });
 }
 

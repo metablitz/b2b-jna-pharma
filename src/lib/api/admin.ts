@@ -140,15 +140,17 @@ export interface AdminPharmacy {
   id: string;
   code: string;
   name: string;
+  ownerName: string | null;
   phone: string;
   email: string | null;
-  businessLicense: string;
   street: string;
-  ward: string;
-  district: string;
   province: string;
   memberTier: string;
   status: string;
+  creditLimit: number;
+  licenseSubmitMethod: string | null;
+  businessLicenseName: string | null;
+  pharmacyLicenseName: string | null;
   createdAt: string;
   _count: { orders: number };
 }
@@ -170,6 +172,31 @@ export const resetPharmacyPassword = (id: string) =>
   adminFetch<{ tempPassword: string }>(`/admin/pharmacies/${id}/reset-password`, {
     method: "POST",
   });
+
+export const setPharmacyCreditLimit = (id: string, creditLimit: number) =>
+  adminFetch<{ id: string; name: string; creditLimit: number }>(
+    `/admin/pharmacies/${id}/credit-limit`,
+    { method: "PUT", body: JSON.stringify({ creditLimit }) }
+  );
+
+export async function downloadPharmacyDocument(id: string, docType: "business" | "pharmacy") {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+  const token = (await import("@/stores/admin-auth-store")).useAdminAuthStore.getState().accessToken;
+  const res = await fetch(`${API_URL}/admin/pharmacies/${id}/documents/${docType}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Không thể tải tài liệu");
+  const blob = await res.blob();
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const match = disposition.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? `${docType}-license`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 // ── Admin Chat ──────────────────────────────────────────────────────────────
 

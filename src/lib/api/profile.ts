@@ -1,6 +1,12 @@
 import { apiFetch } from "@/lib/api-client";
 import type { AuthPharmacy } from "@/stores/auth-store";
 
+export interface CreditInfo {
+  creditLimit: number;
+  outstanding: number;
+  available: number;
+}
+
 export function updateProfile(data: { name?: string; email?: string }) {
   return apiFetch<AuthPharmacy>("/profile", {
     method: "PUT",
@@ -13,4 +19,8 @@ export function changePassword(currentPassword: string, newPassword: string) {
     method: "PUT",
     body: JSON.stringify({ currentPassword, newPassword }),
   });
+}
+
+export function fetchCredit() {
+  return apiFetch<CreditInfo>("/profile/credit");
 }

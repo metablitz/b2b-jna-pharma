@@ -9,13 +9,14 @@ export interface AuthResponse {
 
 export interface RegisterPayload {
   name: string;
-  businessLicense: string;
+  ownerName?: string;
   street: string;
-  ward: string;
-  district: string;
-  province: string;
+  province?: string;
   phone: string;
   password: string;
+  licenseSubmitMethod?: "uploaded" | "via_zalo";
+  businessLicenseFile?: File;
+  pharmacyLicenseFile?: File;
 }
 
 export interface LoginPayload {
@@ -24,9 +25,20 @@ export interface LoginPayload {
 }
 
 export function register(payload: RegisterPayload) {
+  const fd = new FormData();
+  fd.append("name", payload.name);
+  if (payload.ownerName) fd.append("ownerName", payload.ownerName);
+  fd.append("street", payload.street);
+  if (payload.province) fd.append("province", payload.province);
+  fd.append("phone", payload.phone);
+  fd.append("password", payload.password);
+  if (payload.licenseSubmitMethod) fd.append("licenseSubmitMethod", payload.licenseSubmitMethod);
+  if (payload.businessLicenseFile) fd.append("businessLicenseFile", payload.businessLicenseFile);
+  if (payload.pharmacyLicenseFile) fd.append("pharmacyLicenseFile", payload.pharmacyLicenseFile);
+
   return apiFetch<AuthResponse>("/auth/register", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: fd,
   });
 }
 

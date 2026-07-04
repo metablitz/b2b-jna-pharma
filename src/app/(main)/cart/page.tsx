@@ -9,6 +9,7 @@ import { COMPANY } from "@/lib/constants";
 import { useAuthStore } from "@/stores/auth-store";
 import { createOrder } from "@/lib/api/orders";
 import { fetchAddresses, type ApiAddress } from "@/lib/api/addresses";
+import { fetchCredit, type CreditInfo } from "@/lib/api/profile";
 import { ApiError } from "@/lib/api-client";
 import AuthGuard from "@/components/auth/AuthGuard";
 
@@ -25,6 +26,7 @@ function CartContent() {
 
   const [addresses, setAddresses] = useState<ApiAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [credit, setCredit] = useState<CreditInfo | null>(null);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -33,6 +35,7 @@ function CartContent() {
       const def = list.find((a) => a.isDefault);
       if (def) setSelectedAddressId(def.id);
     }).catch(() => {});
+    fetchCredit().then(setCredit).catch(() => {});
   }, [accessToken]);
   const removeItem = useCartStore((state) => state.removeItem);
   const refresh = useCartStore((state) => state.refresh);
@@ -284,6 +287,34 @@ function CartContent() {
         className="w-full rounded-lg border border-zinc-200 p-3 text-sm outline-none focus:border-primary"
         rows={2}
       />
+
+      {/* Credit summary */}
+      {credit && (() => {
+        const wouldExceed = credit.available < totalAmount;
+        return (
+          <div className={`flex flex-col gap-1 rounded-xl border p-3 text-sm ${
+            wouldExceed ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-text-primary">Hạn mức công nợ</span>
+              <span className={`text-xs font-medium ${wouldExceed ? "text-error" : "text-green-700"}`}>
+                {wouldExceed ? "Vượt hạn mức" : "Đủ hạn mức"}
+              </span>
+            </div>
+            <div className="flex justify-between text-xs text-text-secondary">
+              <span>Còn lại: <strong className="text-text-primary">{credit.available.toLocaleString("vi-VN")}đ</strong></span>
+              <span>Đơn này: <strong className={wouldExceed ? "text-error" : "text-text-primary"}>{totalAmount.toLocaleString("vi-VN")}đ</strong></span>
+            </div>
+            {wouldExceed && (
+              <p className="text-xs text-error">
+                Đơn hàng vượt hạn mức. Vui lòng liên hệ{" "}
+                <a href={`tel:${COMPANY.hotlineTel}`} className="font-medium underline">{COMPANY.hotline}</a>{" "}
+                để tăng hạn mức hoặc giảm số lượng sản phẩm.
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {error && <p className="text-sm text-error">{error}</p>}
 

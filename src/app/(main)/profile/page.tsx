@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import AuthGuard from "@/components/auth/AuthGuard";
 import { useAuthStore } from "@/stores/auth-store";
 import { COMPANY } from "@/lib/constants";
-import { updateProfile, changePassword } from "@/lib/api/profile";
+import { updateProfile, changePassword, fetchCredit, type CreditInfo } from "@/lib/api/profile";
 import {
   fetchAddresses,
   createAddress,
@@ -49,9 +49,13 @@ function ProfileContent() {
   const [addresses, setAddresses] = useState<ApiAddress[]>([]);
   const [addrForm, setAddrForm] = useState<AddressPayload>(BLANK_ADDR);
   const [editAddrId, setEditAddrId] = useState<string | null>(null);
+  const [credit, setCredit] = useState<CreditInfo | null>(null);
 
   useEffect(() => {
-    if (accessToken) fetchAddresses().then(setAddresses).catch(() => {});
+    if (accessToken) {
+      fetchAddresses().then(setAddresses).catch(() => {});
+      fetchCredit().then(setCredit).catch(() => {});
+    }
   }, [accessToken]);
 
   async function saveInfo() {
@@ -127,6 +131,9 @@ function ProfileContent() {
           {TIER_LABEL[pharmacy?.memberTier ?? "bronze"]}
         </span>
       </div>
+
+      {/* Credit card widget */}
+      {credit && <CreditCard credit={credit} />}
 
       {msg && (
         <p className={`rounded-lg px-3 py-2 text-sm ${msg.type === "ok" ? "bg-accent text-primary" : "bg-red-50 text-error"}`}>
@@ -241,6 +248,49 @@ function ProfileContent() {
 
 export default function ProfilePage() {
   return <AuthGuard><ProfileContent /></AuthGuard>;
+}
+
+// ── Credit card widget ────────────────────────────────────────────────────────
+
+function CreditCard({ credit }: { credit: CreditInfo }) {
+  const usedPct = Math.min(100, Math.round((credit.outstanding / credit.creditLimit) * 100));
+  const fmt = (n: number) => n.toLocaleString("vi-VN") + "đ";
+  const isNearLimit = usedPct >= 80;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-zinc-100 bg-gradient-to-br from-primary/5 to-primary/10 p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase text-text-secondary">Hạn mức công nợ</p>
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${isNearLimit ? "bg-orange-100 text-price-orange" : "bg-green-100 text-green-700"}`}>
+          {isNearLimit ? "Gần đầy" : "Còn hạn mức"}
+        </span>
+      </div>
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-xs text-text-secondary">Đã sử dụng</p>
+          <p className="text-lg font-bold text-price">{fmt(credit.outstanding)}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-text-secondary">Hạn mức tổng</p>
+          <p className="text-sm font-semibold text-text-primary">{fmt(credit.creditLimit)}</p>
+        </div>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
+        <div
+          className={`h-full rounded-full transition-all ${isNearLimit ? "bg-price-orange" : "bg-primary"}`}
+          style={{ width: `${usedPct}%` }}
+        />
+      </div>
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-text-secondary">Còn lại: <span className="font-medium text-green-700">{fmt(credit.available)}</span></span>
+        <span className="text-text-secondary">{usedPct}% đã dùng</span>
+      </div>
+      <p className="text-[10px] text-text-secondary">
+        Hạn mức được tính dựa trên các đơn đang xử lý (chờ xác nhận, đã xác nhận, đang giao).
+        Tự động hoàn lại khi đơn giao thành công.
+      </p>
+    </div>
+  );
 }
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
