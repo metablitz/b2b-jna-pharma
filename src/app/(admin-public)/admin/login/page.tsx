@@ -30,8 +30,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app-bg px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
+    <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
         <div className="mb-6 flex flex-col items-center gap-1">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-2xl">
             🏥
@@ -74,7 +73,6 @@ export default function AdminLoginPage() {
             {loading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </form>
-      </div>
     </div>
   );
 }
