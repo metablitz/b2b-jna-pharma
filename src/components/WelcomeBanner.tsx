@@ -39,11 +39,6 @@ export default function WelcomeBanner() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary">2.</span>
-              Sau khi được duyệt, bạn có thể đặt hàng với hạn mức công nợ{" "}
-              <strong>3.000.000đ</strong> mặc định.
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary">3.</span>
               Liên hệ hotline{" "}
               <a href={`tel:${COMPANY.hotlineTel}`} className="font-medium text-primary">
                 {COMPANY.hotline}
